@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 
 const MainHome = () => {
@@ -10,13 +10,37 @@ const MainHome = () => {
   
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSource, setSelectedSource] = useState('통합');
-  
-  
+  const [itemsAPI, setItemsAPI] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/board/all?limit=${itemsPerPage}&page=${currentPage}`);
+        
+        if (!response.ok) {
+          throw new Error("서버 응답 오류");
+        }
+
+        const data = await response.json();
+        console.log("받아온 데이터:", data);
+        setItemsAPI(data);
+
+      } catch (error) {
+        console.error("데이터를 받아오는데 실패했습니다.", error);
+      }
+    };
+
+    fetchData();
+  }, [currentPage]); // currentPage가 변경될때마다 실행됨.
+
+  // 페이지 변경 함수
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1) {
+      console.log(`페이지 변경: ${page}`);
       setCurrentPage(page);
     }
   };
+
 
   const items = Array.from({ length: totalItems }, (_, i) => ({
     id: i + 1,
