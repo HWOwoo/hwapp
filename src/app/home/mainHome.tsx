@@ -3,35 +3,57 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 
+interface Product {
+  id: number;
+  site: string;
+  title: string;
+  link: string;
+  price: string;
+  createAt: string;
+}
+
 const MainHome = () => {
 
   const itemsPerPage = 10;
-  const totalItems = 50;
   
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSource, setSelectedSource] = useState('통합');
-  const [itemsAPI, setItemsAPI] = useState([]);
+  const [itemsAPI, setItemsAPI] = useState<Product[]>([]);
+  const [totalItems, setTotalItems] = useState(0); // 🔥 전체 개수 추가
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/board/all?limit=${itemsPerPage}&page=${currentPage}`);
+        const sourceParam = selectedSource === '통합' ? '' : `&site=${selectedSource}`; // "통합"이면 필터링 안함
+        const response = await fetch(`http://localhost:3000/board/all?limit=${itemsPerPage}&page=${currentPage}${sourceParam}`);
         
-        if (!response.ok) {
-          throw new Error("서버 응답 오류");
-        }
-
-        const data = await response.json();
+        if (!response.ok) throw new Error("서버 응답 오류");
+        const data: Product[] = await response.json();
+        
         console.log("받아온 데이터:", data);
         setItemsAPI(data);
-
       } catch (error) {
         console.error("데이터를 받아오는데 실패했습니다.", error);
       }
     };
-
+  
     fetchData();
-  }, [currentPage]); // currentPage가 변경될때마다 실행됨.
+  }, [currentPage, selectedSource]); // currentPage가 변경될때마다 실행됨./
+
+    useEffect(() => {
+      const fetchTotalCount = async () => {
+        try {
+          const response = await fetch(`http://localhost:3000/board/count?site=${selectedSource}`);
+          if (!response.ok) throw new Error("서버 응답 오류");
+          const count = await response.json();
+          setTotalItems(count);
+        } catch (error) {
+          console.error("전체 개수를 가져오는데 실패했습니다.", error);
+        }
+      };
+  
+      fetchTotalCount();
+    }, []);
 
   // 페이지 변경 함수
   const handlePageChange = (page: number) => {
@@ -51,10 +73,9 @@ const MainHome = () => {
     timestamp: new Date(Date.now() - i * 60000).toLocaleString(),
   }));
 
-  const filteredItems = selectedSource === '통합' ? items : items.filter(item => item.source === selectedSource);
-  const displayedItems = filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(itemsAPI.length / itemsPerPage);
+  const displayedItems = itemsAPI.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
     return (
         <>
@@ -83,21 +104,22 @@ const MainHome = () => {
           </div>
         </div>
 
-        {/* 카테고리 리스트 */}
-        <div className="flex justify-center items-center space-x-12 h-12">
-          {['통합', '아카라이브', '뽐뿌', '퀘이사존'].map(source => (
-            <button 
-              key={source} 
-              onClick={() => {
-                console.log(`선택된 소스: ${source}`);
-                setSelectedSource(source);
-              }}
-              className={`inline-flex w-32 px-4 py-2 border-b-2 font-semibold transition ${selectedSource === source ? 'text-blue-600 border-blue-500' : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-blue-500'}`}
-            >
-              {source}
-            </button>
-          ))}
-        </div>
+          {/* 카테고리 리스트 */}
+          <div className="flex justify-center items-center space-x-12 h-12">
+            {["통합", "Arca", "PPomppu", "Quasar"].map(source => (
+              <button 
+                key={source} 
+                onClick={() => {
+                  console.log(`선택된 소스: ${source}`);
+                  setSelectedSource(source);
+                  setCurrentPage(1);
+                }}
+                className={`inline-flex w-32 px-4 py-2 border-b-2 font-semibold transition ${selectedSource === source ? 'text-blue-600 border-blue-500' : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-blue-500'}`}
+              >
+                {source}
+              </button>
+            ))}
+          </div>
 
         {/* 특가 상품 리스트 */}
         <section className="!py-4 !px-6 flex-grow bg-gray-100 flex justify-center">
@@ -116,44 +138,46 @@ const MainHome = () => {
             <div className="flex-1 !mt-4">
               <h3 className="text-lg font-semibold text-gray-800 col-span-2">{item.title}</h3>
               <p className="text-gray-600">{item.price}</p>
-              <p className="text-gray-400">{item.timestamp}</p>
+              <p className="text-gray-400">{item.createAt}</p>
               <div className="col-span-2 flex justify-start">
-                <button 
+                <button
+                  onClick={() => window.open(item.link, '_blank')} 
                   className="bg-blue-500 text-white !px-2.5 !py-1 rounded-lg shadow-md hover:bg-blue-600 transition duration-300 hover:scale-105 flex items-center justify-center gap-2"
                 >
                   <span>상품 이동</span>
                 </button>
               </div>
             </div>
-            <p className="text-gray-500">{item.source}</p>
+            <p className="text-gray-500">{item.site}</p>
           </div>
         ))}
       
-      <div className="flex space-x-2 !mt-8 !mb-8">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="!px-3 !py-1 text-gray-700 rounded-md disabled:opacity-50"
-          >
-            &lt;
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`!px-3 !py-1 rounded-md ${page === currentPage ? 'bg-blue-500 text-white' : ' text-gray-700'}`}
-            >
-              {page}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="!px-3 !py-1 text-gray-700 rounded-md disabled:opacity-50"
-          >
-            &gt;
-          </button>
-        </div>
+          {/* 페이지네이션 */}
+          <div className="flex space-x-2 !mt-8 !mb-8">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="!px-3 !py-1 text-gray-700 rounded-md disabled:opacity-50"
+                >
+                  &lt;
+                </button>
+                {Array.from({ length: totalItems }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`!px-3 !py-1 rounded-md ${page === currentPage ? 'bg-blue-500 text-white' : ' text-gray-700'}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalItems}
+                  className="!px-3 !py-1 text-1gray-700 rounded-md disabled:opacity-50"
+                >
+                  &gt;
+                </button>
+              </div>
       </div>
     </section>
 
