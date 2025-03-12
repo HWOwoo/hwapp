@@ -26,7 +26,7 @@ const MainHome = () => {
       try {
         const sourceParam = selectedSource === '통합' ? '' : `&site=${selectedSource}`; // "통합"이면 필터링 안함
         const response = await fetch(`http://localhost:3000/board/all?limit=${itemsPerPage}&page=${currentPage}${sourceParam}`);
-        
+         
         if (!response.ok) throw new Error("서버 응답 오류");
         const data: Product[] = await response.json();
         
@@ -38,7 +38,7 @@ const MainHome = () => {
     };
   
     fetchData();
-  }, [currentPage, selectedSource]); // currentPage가 변경될때마다 실행됨./
+  }, [currentPage, selectedSource]); // 변경될때마다 실행됨
 
     useEffect(() => {
       const fetchTotalCount = async () => {
@@ -46,7 +46,7 @@ const MainHome = () => {
           const response = await fetch(`http://localhost:3000/board/count?site=${selectedSource}`);
           if (!response.ok) throw new Error("서버 응답 오류");
           const count = await response.json();
-          setTotalItems(count);
+          setTotalItems(count.count);
         } catch (error) {
           console.error("전체 개수를 가져오는데 실패했습니다.", error);
         }
@@ -55,6 +55,7 @@ const MainHome = () => {
       fetchTotalCount();
     }, []);
 
+    
   // 페이지 변경 함수
   const handlePageChange = (page: number) => {
     if (page >= 1) {
@@ -63,19 +64,7 @@ const MainHome = () => {
     }
   };
 
-
-  const items = Array.from({ length: totalItems }, (_, i) => ({
-    id: i + 1,
-    title: `특가 상품 ${i + 1}`,
-    price: (Math.random() * 100000).toFixed(0) + '원',
-    category: ['가전', '의류', '식품', '가구', '뷰티'][i % 5],
-    source: ['아카라이브', '뽐뿌', '퀘이사존'][i % 3],
-    timestamp: new Date(Date.now() - i * 60000).toLocaleString(),
-  }));
-
-  const totalPages = Math.ceil(itemsAPI.length / itemsPerPage);
-  const displayedItems = itemsAPI.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
+  const totalPages = Math.ceil(totalItems / itemsPerPage); // 전체 페이지 수 계산
 
     return (
         <>
@@ -124,7 +113,7 @@ const MainHome = () => {
         {/* 특가 상품 리스트 */}
         <section className="!py-4 !px-6 flex-grow bg-gray-100 flex justify-center">
       <div className="flex flex-col gap-4 items-center w-full max-w-4xl">
-        {displayedItems.map((item) => (
+        {itemsAPI.map((item) => (
           <div key={item.id} className="bg-white !p-1.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex gap-3 border border-gray-200 hover:border-blue-400 w-full">
             <div className="w-36 h-36 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
               <Image 
@@ -161,7 +150,7 @@ const MainHome = () => {
                 >
                   &lt;
                 </button>
-                {Array.from({ length: totalItems }, (_, i) => i + 1).map((page) => (
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
