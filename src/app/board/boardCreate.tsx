@@ -1,37 +1,108 @@
-import { useState } from "react";
+    import { useState } from "react";
 
-interface WriteModalProps {
-    visible: boolean;
-    onClose: () => void;
-}
-
-const boardCreate = ({ visible, onClose }: WriteModalProps) => {
-    if (!visible) {
-        return null;
+    interface WriteModalProps {
+        visible: boolean;
+        onClose: () => void;
     }
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white !p-8 rounded-xl shadow-lg w-full max-w-lg">
-                <h2 className="text-xl font-semibold mb-4">새로운 상품 작성하기</h2>
+    const boardCreate = ({ visible, onClose }: WriteModalProps) => {
+        if (!visible) {
+            return null;
+        }
 
-                {/* 입력 필드 */}
-                <input type="text" placeholder="제목" className="w-full !p-2 border border-gray-300 rounded-lg mb-4" />
-                <input type="text" placeholder="가격" className="w-full !p-2 border border-gray-300 rounded-lg mb-4" />
-                <input type="text" placeholder="링크 주소" className="w-full !p-2 border border-gray-300 rounded-lg mb-4" />
+        const [formData, setFormData] = useState({
+            creater: "",
+            title: "",
+            link: "",
+            price: "",
+        });
 
-                {/* 확인 및 취소 버튼 */}
-                <div className="flex justify-end space-x-3">
-                    <button className="bg-gray-400 text-white !px-4 !py-2 rounded-lg" onClick={onClose}> {/* 👈 onClose 사용 */}
-                        취소
-                    </button>
-                    <button className="bg-blue-500 text-white !px-4 !py-2 rounded-lg">
-                        등록
-                    </button>
-                </div>
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        };
+        
+        const handleSubmit = async () => {
+            try {
+            const response = await fetch("http://localhost:3000/board/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+        
+            if (!response.ok) { 
+                throw new Error("서버 응답 오류");
+            }
+            onClose(); // 모달 닫기
+
+            } catch (error) {
+            console.error("데이터 전송 실패:", error);
+            }
+
+        };
+
+        return (
+            <div className="fixed inset-0 flex justify-center items-center z-50 bg-black/20" >
+        {/* 모달 박스 */}
+        <div className="bg-white !p-6 rounded-lg shadow-md w-full max-w-md animate-fadeIn border-1 inset-0 z-99">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+            특가 정보 등록
+            </h2>
+
+        {/* 입력 필드 */}
+            <div className="space-y-4">
+            <input
+                type="text"
+                name="creater"
+                placeholder="작성자"
+                value={formData.creater}
+                onChange={handleChange}
+                className="w-full !p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+            /> {/* TODO 로그인 데이터 사용할 예정 */}
+            <input
+                type="text"
+                name="title"
+                placeholder="상품 제목"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full !p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+            />
+            <input
+                type="text"
+                name="price"
+                placeholder="가격 (예: 30,000원)"
+                value={formData.price}
+                onChange={handleChange}
+                className="w-full !p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+            />
+            <input
+                type="text"
+                name="link"
+                placeholder="구매 링크"
+                value={formData.link}
+                onChange={handleChange}
+                className="w-full !p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none transition !mb-3"
+            />
+            </div>
+
+
+            {/* 버튼 영역 */}
+            <div className="flex justify-between items-center mt-6">
+            <button
+                onClick={onClose}
+                className="bg-gray-300 text-gray-800 !px-5 !py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+            >
+                취소
+            </button>
+            <button
+                onClick={handleSubmit}
+                className="bg-blue-500 text-white !px-5 !py-2 rounded-lg hover:bg-blue-600 transition duration-200"
+            >
+                등록하기
+            </button>
             </div>
         </div>
-    );
-}
+        </div>
+        );
+    }
 
-export default boardCreate;
+    export default boardCreate;

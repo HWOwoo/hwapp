@@ -132,7 +132,15 @@ const MainHome = () => {
                 <div key={item.id} className="bg-white !p-1.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex gap-3 border border-gray-200 hover:border-blue-400 w-full">
                   <div className="w-36 h-36 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
                     <Image
-                      src={`/images/${("0" + item.id).slice(-2)}.png`}
+                      src={
+                        item.site === "Arca"
+                        ? "/images/ARCA.png"
+                        : item.site === "PPomppu"
+                        ? "/images/PPOMP.png"
+                        : item.site === "Quasar"
+                        ? "/images/QUSARA.png"
+                        : "/images/ARCA.png"
+                      }
                       width={120}
                       height={120}
                       alt="상품 이미지"
