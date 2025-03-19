@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import BoardCreate from "../board/boardCreate";
+import AiResult from "../board/aiReuslt"
+import { MoonLoader } from "react-spinners";
 
 /* Model */
 interface Product {
@@ -12,20 +14,27 @@ interface Product {
   link: string;
   price: string;
   createAt: string;
+  aiContent: string;
 }
 
 /* Model */
 
 const MainHome = () => {
 
-  /* 변수지정 */
-  const itemsPerPage = 10;
+  
+  /* state 지정 */
   const [currentPage, setCurrentPage] = useState(1); // 현재 페이지
   const [selectedSource, setSelectedSource] = useState('통합'); // 선택된 사이트
   const [itemsAPI, setItemsAPI] = useState<Product[]>([]); // API로 받아온 상품 리스트
   const [totalItems, setTotalItems] = useState(0); // 리스트 아이템 전체개수
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [isModalOpen, setIsModalOpen] = useState(false); // 등록 모달 상태 추가가
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false); // PRE 모달 상태 추가
+  const [aiResult, setAiResult] = useState(""); // PRE 분석 결과 저장
+  const [isLoadding, setIsLoadding] = useState(false);
+
+  /* 변수지정 */
+  const itemsPerPage = 10;  
   const maxPageButtons = 10; // 한 번에 보여줄 최대 페이지 개수
   const totalPages = Math.ceil(totalItems / itemsPerPage); // 전체 페이지 수 계산
   const startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2)); // 시작 페이지
@@ -73,6 +82,94 @@ const MainHome = () => {
       setCurrentPage(page);
     }
   };
+
+  const callPerplexity = async (query: string) => {
+    setIsLoadding(true);
+    const API_URL = "https://api.perplexity.ai/chat/completions";
+    const BEARER_TOKEN = process.env.NEXT_PUBLIC_BEARER_TOKEN;
+    
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${BEARER_TOKEN}`,
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
+          messages: [
+            { role: "system", content: "평소 가격 범위, 어느정도 가격대를 형성하고 있는 물품인지 알려줘" },
+            { role: "user", content: query + " 가격" },
+          ],
+          max_tokens: 1024,
+          temperature: 0.2,
+          top_p: 0.9,
+          return_citations: false,
+          search_domain_filter: ["naver.com"],
+          return_images: false,
+          return_related_questions: false,
+          search_recency_filter: "month",
+          top_k: 0,
+          stream: false,
+          presence_penalty: 0,
+          frequency_penalty: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Perplexity API 오류");
+      }
+
+      const data = await response.json();
+      const aiContent = data.choices?.[0]?.message?.content || "AI 분석 결과 없음";
+
+      return aiContent;
+    } catch (error) {
+      console.error("AI 분석 실패:", error);
+      return "AI 분석 실패";
+    } finally {
+      setIsLoadding(false); // 로딩 종료
+    }
+  }
+
+  const aiUpdate = async ( link : string, title : string ) => {
+    const aiContent = await callPerplexity(title);
+
+    try {
+      const response = await fetch("http://localhost:3000/board/updateAi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ link, aiContent }),
+      });
+
+      if (!response.ok) throw new Error("서버 응답 오류");
+
+      handleOpenModal(link);
+    } catch (error) {
+      console.error("업데이트 실패:", error);
+      alert("업데이트 중 오류 발생");
+    }
+  }
+
+  const handleOpenModal = async (link:string) => {
+    try{
+      const response = await fetch("http://localhost:3000/board/readAiContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ link }),
+      });
+
+      const data = await response.json();
+
+      setAiResult(data.aiContent || 'Not DATA');
+      setIsAiModalOpen(true);
+
+    } catch (error) {
+      console.log('Error')
+    }
+  }
 
   return (
     <>
@@ -158,6 +255,14 @@ const MainHome = () => {
                       >
                         <span>상품 이동</span>
                       </button>
+                      |
+                      <button
+                        onClick={() => item.aiContent ? handleOpenModal(item.link) : aiUpdate(item.link, item.title)}
+                        className="bg-blue-500 text-white !px-2.5 !py-1 rounded-lg shadow-md hover:bg-blue-600 transition duration-300 hover:scale-105 flex items-center justify-center gap-2"
+                        disabled={isLoading}
+                      >
+                        <span>상품 분석</span>
+                      </button>
                     </div>
                   </div>
                   <p className="text-gray-500">{item.site}</p>
@@ -203,12 +308,17 @@ const MainHome = () => {
             <p>&copy; 2025 HAM. 모든 권리 보유.</p>
           </footer>
 
-           {/* 🟢 모달 컴포넌트 */}
-           <BoardCreate visible={isModalOpen} onClose={() => setIsModalOpen(false)} /> {/* 👈 닫기 기능 추가 */}
+           {/* 등록 모달 컴포넌트 */}
+           <BoardCreate visible={isModalOpen} onClose={() => setIsModalOpen(false)} /> 
+           <AiResult visible={isAiModalOpen} onClose={() => setIsAiModalOpen(false)} aiContent={aiResult} />
+            {isLoadding ?   
+            <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+          <MoonLoader size={80} color="#ffffff" />
+        </div> : ''}
             
         </div>
-
       </div>
+      
     </>
   )
 }
