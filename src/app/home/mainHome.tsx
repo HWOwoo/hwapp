@@ -32,6 +32,8 @@ const MainHome = () => {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false); // PRE 모달 상태 추가
   const [aiResult, setAiResult] = useState(""); // PRE 분석 결과 저장
   const [isLoadding, setIsLoadding] = useState(false);
+  const [aiContent, setAiContent] = useState("");
+  const [isAModalOpen, setAIsModalOpen] = useState(false);
 
   /* 변수지정 */
   const itemsPerPage = 10;  
@@ -167,7 +169,23 @@ const MainHome = () => {
       setIsAiModalOpen(true);
 
     } catch (error) {
-      console.log('Error')
+      console.log('Error handleOpenModal')
+    }
+  }
+
+  const aiResultCheck = async (link:string) => {
+    try {
+      const response = await fetch("http://localhost:3000/board/readAiContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ link }),
+      });
+
+      const data = await response.json();
+      return data.aiContent || null;
+    } catch (error) {
+      console.log('Error aiResultCheck')
+      return null;
     }
   }
 
@@ -257,11 +275,27 @@ const MainHome = () => {
                       </button>
                       |
                       <button
-                        onClick={() => item.aiContent ? handleOpenModal(item.link) : aiUpdate(item.link, item.title)}
+                        onClick={async () => {
+                          if (isLoading) return;
+
+                          const content = await aiResultCheck(item.link);
+                          if (content) {
+                            // 서버에 aiContent가 있다면 모달 열기
+                            setAiContent(content);
+                            setIsAiModalOpen(true);
+                          } else {
+                            // 없다면 AI 분석 실행
+                            aiUpdate(item.link, item.title);
+                          }
+                        }}
                         className="bg-blue-500 text-white !px-2.5 !py-1 rounded-lg shadow-md hover:bg-blue-600 transition duration-300 hover:scale-105 flex items-center justify-center gap-2"
                         disabled={isLoading}
                       >
-                        <span>상품 분석</span>
+                        {isLoading ? (
+                          <MoonLoader size={20} color="#ffffff" />
+                        ) : (
+                          <span>상품 분석</span>
+                        )}
                       </button>
                     </div>
                   </div>
