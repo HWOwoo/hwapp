@@ -107,7 +107,7 @@ const MainHome = () => {
           temperature: 0.2,
           top_p: 0.9,
           return_citations: false,
-          search_domain_filter: ["naver.com"],
+          search_domain_filter: ["-arca", "-ppomppu", "-quasar"],
           return_images: false,
           return_related_questions: false,
           search_recency_filter: "month",
@@ -339,7 +339,7 @@ const MainHome = () => {
 
           {/* 푸터 */}
           <footer className="bg-gray-800 text-white text-center py-6 mt-12 h-16">
-            <p>&copy; 2025 HAM. 모든 권리 보유.</p>
+            <p>&copy; 2025 Footer</p>
           </footer>
 
            {/* 등록 모달 컴포넌트 */}
